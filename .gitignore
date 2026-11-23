@@ -1,0 +1,19 @@
+/node_modules
+/oh_modules
+/local.properties
+/.idea
+**/build
+/.hvigor
+.cxx
+/.clangd
+/.clang-format
+/.clang-tidy
+**/.test
+/.appanalyzer
+# 签名私钥与证书：绝不入库
+/keys
+# 构建产物与本地缓存
+/dist
+/.cache
+/.deveco-tmp
+build-profile.json5.local

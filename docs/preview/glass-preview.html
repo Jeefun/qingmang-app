@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>果鉴 · 液态玻璃材质预览</title>
+<style>
+  :root {
+    /* 与 ArkTS 侧 Glass.ets 一一对应的配方 */
+    --blur-thin: 16px;
+    --blur-regular: 24px;
+    --blur-thick: 34px;
+    --sat: 1.8;
+    --bri: 1.05;
+
+    --dark-tint: rgba(16, 12, 14, 0.50);
+    --dark-tint-thick: rgba(10, 8, 9, 0.58);
+    --light-tint: rgba(255, 255, 255, 0.65);
+    --light-tint-thick: rgba(255, 255, 255, 0.85);
+
+    --edge-dark: rgba(255, 255, 255, 0.18);
+    --edge-light: rgba(255, 255, 255, 0.65);
+    --hi-dark: rgba(255, 255, 255, 0.25);
+    --hi-light: rgba(255, 255, 255, 0.40);
+    --accent: #6ECC54;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #141214;
+    color: #F7F2EF;
+    padding: 34px 28px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .head { max-width: 1180px; margin: 0 auto 26px; }
+  .head h1 { font-size: 21px; font-weight: 600; letter-spacing: .3px; }
+  .head p {
+    font-size: 12.5px; line-height: 1.7; color: #9C9490;
+    margin-top: 8px; max-width: 780px;
+  }
+  .head code {
+    font-family: ui-monospace, "SF Mono", Consolas, monospace;
+    background: rgba(255,255,255,.07); padding: 1px 5px; border-radius: 4px;
+    font-size: 11.5px; color: #C9C2BE;
+  }
+
+  .stage { display: flex; gap: 40px; justify-content: center; flex-wrap: wrap; align-items: flex-start; }
+  .case { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .case > .cap { font-size: 11.5px; color: #8A827E; letter-spacing: .1em; }
+
+  /* ---------- 手机外壳 ---------- */
+  .phone {
+    width: 360px; height: 777px; border-radius: 34px;
+    position: relative; overflow: hidden;
+    box-shadow: 0 26px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.07);
+    /* 用 zoom 而不是 transform: scale —— scale 不占布局空间，三个手机必然叠在一起 */
+    zoom: 1.0;
+  }
+
+  /* 深色场景：模拟视频画面（有彩块才能看出模糊与饱和度） */
+  .scene {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(60% 42% at 22% 18%, #7A4B2E 0%, transparent 62%),
+      radial-gradient(52% 38% at 80% 30%, #2F5A6B 0%, transparent 60%),
+      radial-gradient(70% 50% at 55% 88%, #4A2A44 0%, transparent 66%),
+      linear-gradient(168deg, #1B1719 0%, #241C1E 46%, #141013 100%);
+  }
+  .scene::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.42) 0%, transparent 26%, transparent 58%, rgba(0,0,0,.55) 100%);
+  }
+
+  /* 浅色场景 */
+  .scene-light {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(58% 34% at 18% 12%, #E9DFD2 0%, transparent 60%),
+      radial-gradient(48% 30% at 84% 26%, #D9E4DA 0%, transparent 58%),
+      linear-gradient(172deg, #FBF8F4 0%, #F4EFE9 52%, #EEE8E1 100%);
+  }
+
+  .layer { position: absolute; inset: 0; z-index: 2; }
+
+  /* ---------- 玻璃基础类 ---------- */
+  .g {
+    position: relative;
+    backdrop-filter: blur(var(--blur-regular)) saturate(var(--sat)) brightness(var(--bri));
+    -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(var(--sat)) brightness(var(--bri));
+    border-radius: 20px;
+  }
+  /* 顶部折射高光：两端淡出 */
+  .g::before {
+    content: ""; position: absolute; top: 1px; left: 7%; right: 7%; height: 1px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, transparent, var(--hi), transparent);
+  }
+  .g.dark { background: var(--dark-tint); border: 1px solid var(--edge-dark); box-shadow: 0 8px 22px rgba(0,0,0,.35); --hi: var(--hi-dark); }
+  .g.light { background: var(--light-tint); border: 1px solid var(--edge-light); box-shadow: 0 8px 22px rgba(120,100,80,.16); --hi: var(--hi-light); }
+  .g.thin { backdrop-filter: blur(var(--blur-thin)) saturate(1.6) brightness(1.04); -webkit-backdrop-filter: blur(var(--blur-thin)) saturate(1.6) brightness(1.04); }
+  .g.thick { backdrop-filter: blur(var(--blur-thick)) saturate(2) brightness(.88); -webkit-backdrop-filter: blur(var(--blur-thick)) saturate(2) brightness(.88); }
+
+  /* ---------- 播放器控件 ---------- */
+  .topbar { position: absolute; top: 14px; left: 15px; right: 15px; display: flex; align-items: center; gap: 8px; }
+  .rb {
+    width: 34px; height: 34px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 13px; color: #F3EEEA;
+  }
+  .rb.big { width: 36px; height: 36px; }
+  .pill {
+    height: 28px; padding: 0 11px; border-radius: 14px;
+    display: grid; place-items: center; font-size: 12px; color: #EFE9E4;
+  }
+  .pill.on {
+    background: rgba(110,204,84,.85);
+    border: 1px solid rgba(255,255,255,.30);
+    color: #10240C; font-weight: 500;
+    backdrop-filter: blur(14px) saturate(1.4) brightness(1.05);
+  }
+  .center-play {
+    position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%);
+    width: 46px; height: 46px; border-radius: 50%;
+    display: grid; place-items: center; font-size: 16px; color: #fff;
+  }
+  .bottombar-wrap { position: absolute; left: 0; right: 0; bottom: 26px; padding: 0 15px; }
+  .progress { height: 3px; border-radius: 2px; background: rgba(255,255,255,.22); margin-bottom: 14px; }
+  .progress i { display: block; height: 100%; width: 38%; border-radius: 2px; background: rgba(255,255,255,.9); }
+  .controls { display: flex; align-items: center; justify-content: space-between; }
+
+  /* ---------- 设置面板（厚玻璃） ---------- */
+  .sheet {
+    position: absolute; left: 10px; right: 10px; bottom: 10px;
+    border-radius: 20px; padding: 12px 16px 14px;
+  }
+  .sheet-title {
+    font-size: 13px; font-weight: 600; color: #F0EAE6;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+  }
+  .sheet-title .x { font-size: 11px; color: rgba(255,255,255,.6); }
+  .sheet-label { font-size: 11px; color: rgba(255,255,255,.55); margin: 7px 0 5px; }
+  .sheet-grid { display: flex; gap: 6px; }
+  .sheet-grid span {
+    flex: 1; height: 32px; border-radius: 9px; display: grid; place-items: center;
+    font-size: 12px; color: #E6E0DC;
+    background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.14);
+    backdrop-filter: blur(12px) saturate(1.4) brightness(1.02);
+  }
+  .sheet-grid span.sel {
+    background: rgba(110,204,84,.85); border-color: rgba(255,255,255,.42);
+    color: #10240C; font-weight: 500;
+    backdrop-filter: blur(14px) saturate(1.4) brightness(1.05);
+  }
+  .sheet-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12.5px; color: #E6E0DC; padding: 9px 0 0;
+  }
+  .sw {
+    width: 40px; height: 23px; border-radius: 12px;
+    background: rgba(255,255,255,.16); position: relative;
+  }
+  .sw.on { background: rgba(110,204,84,.9); }
+  .sw i {
+    position: absolute; top: 2px; left: 2px; width: 19px; height: 19px;
+    border-radius: 50%; background: #fff;
+  }
+  .sw.on i { left: 19px; }
+
+  /* 底部导航 */
+  .nav {
+    position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%);
+    width: 218px; padding: 3px 5px; border-radius: 26px;
+    display: flex;
+  }
+  .nav-item {
+    width: 52px; height: 45px; border-radius: 23px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    font-size: 10px; color: rgba(255,255,255,.62);
+  }
+  .nav-item .ic { font-size: 14px; }
+  .nav-item.on {
+    background: rgba(255,255,255,.70);
+    border: 1px solid rgba(255,255,255,.60);
+    color: #1A1416; font-weight: 500;
+    box-shadow: 0 3px 12px rgba(0,0,0,.12);
+  }
+  .nav.light .nav-item { color: rgba(90,78,70,.62); }
+  .nav.light .nav-item.on { background: rgba(255,255,255,.92); border-color: rgba(255,255,255,.9); color: #1A1416; }
+
+  /* 侧边导航（宽屏 / 车机） */
+  .side { position: absolute; left: 0; top: 0; bottom: 0; width: 96px; padding: 44px 12px 0; }
+  .side .brand { font-size: 17px; font-weight: 700; text-align: center; margin-bottom: 24px; }
+  .side-item {
+    height: 64px; border-radius: 12px; margin-bottom: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    font-size: 11px; color: rgba(255,255,255,.72);
+  }
+  .side-item.on {
+    background: rgba(255,255,255,.70);
+    border: 1px solid rgba(255,255,255,.60);
+    color: #1A1416; font-weight: 500;
+    box-shadow: 0 3px 14px rgba(0,0,0,.12);
+  }
+
+  /* ---------- 车机内容区 ---------- */
+  .wide-content { position: absolute; left: 96px; right: 0; top: 0; bottom: 0; padding: 24px 22px; }
+  .wide-search {
+    height: 40px; border-radius: 20px; display: flex; align-items: center;
+    padding: 0 16px; font-size: 12.5px; color: rgba(255,255,255,.55); max-width: 420px;
+  }
+  .wide-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; max-width: 460px; }
+
+  /* ---------- 列表页元素 ---------- */
+  .page-pad { position: absolute; left: 15px; right: 15px; top: 52px; }
+  .search {
+    height: 43px; border-radius: 22px; display: flex; align-items: center;
+    padding: 0 18px; font-size: 13px; color: rgba(90,78,70,.62); justify-content: space-between;
+  }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 11px; margin-top: 15px; }
+  .poster { border-radius: 10px; overflow: hidden; position: relative; aspect-ratio: 2/3; }
+  .poster .meta {
+    position: absolute; right: 7px; bottom: 7px;
+    font-size: 11px; color: #fff; padding: 3px 7px; border-radius: 6px;
+    backdrop-filter: blur(12px) saturate(1.4) brightness(.92);
+    background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.20);
+  }
+  .poster-label {
+    font-size: 13px; color: #3A322E; margin-top: 7px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .chips { display: flex; gap: 7px; margin-top: 16px; }
+  .chip {
+    height: 41px; border-radius: 21px; display: grid; place-items: center;
+    font-size: 14px; color: #5A4E46; flex: 1;
+  }
+  .chip.on {
+    background: rgba(110,204,84,.85);
+    border: 1px solid rgba(255,255,255,.45);
+    color: #10240C; font-weight: 500;
+    backdrop-filter: blur(16px) saturate(1.6) brightness(1.04);
+  }
+  .card { border-radius: 12px; padding: 16px; margin-top: 16px; font-size: 15px; color: #3A322E; }
+  .primary-btn {
+    margin-top: 16px; height: 48px; border-radius: 24px;
+    display: grid; place-items: center; font-size: 15px; font-weight: 500; color: #10240C;
+    background: rgba(110,204,84,.88);
+    border: 1px solid rgba(255,255,255,.42);
+    backdrop-filter: blur(24px) saturate(1.8) brightness(1.05);
+    box-shadow: 0 8px 24px rgba(70,140,50,.28), inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .row-title { font-size: 15px; font-weight: 500; color: #3A322E; }
+
+  /* ---------- 参数说明 ---------- */
+  .spec {
+    max-width: 1180px; margin: 0 auto; padding: 22px 24px;
+    background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px;
+  }
+  .spec h2 { font-size: 13.5px; font-weight: 600; margin-bottom: 12px; color: #E8E2DE; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,.06); vertical-align: top; }
+  th { color: #8A827E; font-weight: 500; font-size: 11.5px; }
+  td { color: #C6BFBA; }
+  td code { font-family: ui-monospace, Consolas, monospace; color: #A8D89A; font-size: 11.5px; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>果鉴 · 液态玻璃材质</h1>
+  <p>
+    与 <code>theme/Glass.ets</code>、<code>view/GlassWidgets.ets</code> 一一对应的视觉预览。
+    玻璃不是「加个模糊」：<code>radius</code> 决定厚度、<code>saturation</code> 让背景颜色透上来（纯模糊会发灰）、
+    <code>brightness</code> 模拟光穿过玻璃，再叠 1px 折射亮边 + 顶部两端淡出的高光 + 弥散投影，才有边界和厚度。
+  </p>
+</div>
+
+<div class="stage">
+
+  <!-- 深色：播放器 -->
+  <div class="case">
+    <div class="phone">
+      <div class="scene"></div>
+      <div class="layer">
+        <div class="topbar">
+          <div class="rb big g thin dark">‹</div>
+          <div style="flex:1"></div>
+          <div class="rb g thin dark">弹</div>
+          <div class="pill g thin dark">1080P</div>
+          <div class="rb g thin dark">⚙</div>
+        </div>
+
+        <div class="center-play g dark">▶</div>
+
+        <div class="bottombar-wrap" style="bottom:96px">
+          <div class="progress"><i></i></div>
+          <div class="controls">
+            <div class="rb g thin dark">⏮</div>
+            <div class="pill g thin dark">1.0x</div>
+            <div class="pill on">竖屏全屏</div>
+            <div class="rb g thin dark">⏭</div>
+          </div>
+        </div>
+
+        <!-- 设置面板：厚玻璃，背后仍是视频画面 -->
+        <div class="sheet g thick dark">
+          <div class="sheet-title">播放设置<span class="x">✕</span></div>
+          <div class="sheet-label">播放速度</div>
+          <div class="sheet-grid">
+            <span>0.5x</span><span>0.75x</span><span class="sel">1.0x</span><span>1.25x</span>
+          </div>
+          <div class="sheet-label">画质</div>
+          <div class="sheet-grid">
+            <span class="sel">1080P</span><span>720P</span><span>480P</span>
+          </div>
+          <div class="sheet-row"><span>自动连播</span><span class="sw on"><i></i></span></div>
+          <div class="sheet-row"><span>屏幕弹幕</span><span class="sw on"><i></i></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">深色 · 播放控件 + 厚玻璃设置面板（背后是视频画面）</div>
+  </div>
+
+  <!-- 浅色：列表页 -->
+  <div class="case">
+    <div class="phone">
+      <div class="scene-light"></div>
+      <div class="layer" style="padding:0">
+        <div class="page-pad">
+          <div class="search g light thin">
+            <span>搜剧名、演员或关键词</span><span style="color:#3A322E">搜索</span>
+          </div>
+          <div class="grid">
+            <div>
+              <div class="poster" style="background:linear-gradient(150deg,#C98A6B,#8E5340)"><span class="meta">全 20 集</span></div>
+              <div class="poster-label">退婚后我成了首富</div>
+            </div>
+            <div>
+              <div class="poster" style="background:linear-gradient(150deg,#7FA6B8,#3F6274)"><span class="meta">全 32 集</span></div>
+              <div class="poster-label">出租车诡事</div>
+            </div>
+            <div>
+              <div class="poster" style="background:linear-gradient(150deg,#A98BB5,#5F4A73)"><span class="meta">更新中</span></div>
+              <div class="poster-label">她的秘密花园</div>
+            </div>
+          </div>
+
+          <div class="chips">
+            <div class="chip on">全部</div>
+            <div class="chip g light thin">甜宠</div>
+            <div class="chip g light thin">逆袭</div>
+          </div>
+
+          <div class="card g light">
+            <div class="row-title">继续观看</div>
+            <div style="font-size:13px;color:#7A6E66;margin-top:6px">退婚后我成了首富 · 第 8 集</div>
+          </div>
+
+          <div class="primary-btn g" style="backdrop-filter:blur(24px) saturate(1.8) brightness(1.05)">继续播放</div>
+        </div>
+
+        <div class="nav g light" style="bottom:22px">
+          <div class="nav-item on"><span class="ic">⌂</span>首页</div>
+          <div class="nav-item"><span class="ic">⌕</span>搜索</div>
+          <div class="nav-item"><span class="ic">◷</span>历史</div>
+          <div class="nav-item"><span class="ic">☺</span>我的</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">浅色 · 搜索框 / 标签 / 卡片 / 主按钮 / 导航条</div>
+  </div>
+
+  <!-- 宽屏：侧边导航（车机横屏比例） -->
+  <div class="case">
+    <div class="phone" style="width:600px;height:338px">
+      <div class="scene"></div>
+      <div class="layer">
+        <div class="side g thin dark" style="border-radius:0;border-left:0;border-top:0;border-bottom:0;border-right:1px solid rgba(255,255,255,.16)">
+          <div class="brand">果鉴</div>
+          <div class="side-item on"><span class="ic">⌂</span>首页</div>
+          <div class="side-item"><span class="ic">⌕</span>搜索</div>
+          <div class="side-item"><span class="ic">◷</span>历史</div>
+          <div class="side-item"><span class="ic">☺</span>我的</div>
+        </div>
+        <div class="wide-content">
+          <div class="wide-search g thin dark">搜剧名、演员或关键词</div>
+          <div class="wide-grid">
+            <div><div class="poster" style="background:linear-gradient(150deg,#C98A6B,#8E5340)"><span class="meta">全 20 集</span></div><div class="poster-label" style="color:#E8E2DE">退婚后我成了首富</div></div>
+            <div><div class="poster" style="background:linear-gradient(150deg,#7FA6B8,#3F6274)"><span class="meta">全 32 集</span></div><div class="poster-label" style="color:#E8E2DE">出租车诡事</div></div>
+            <div><div class="poster" style="background:linear-gradient(150deg,#A98BB5,#5F4A73)"><span class="meta">更新中</span></div><div class="poster-label" style="color:#E8E2DE">她的秘密花园</div></div>
+            <div><div class="poster" style="background:linear-gradient(150deg,#8FA87C,#4E6842)"><span class="meta">全 16 集</span></div><div class="poster-label" style="color:#E8E2DE">重生之商海</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">宽屏 · 侧边玻璃导航（右侧一道折射亮边作分界）</div>
+  </div>
+
+</div>
+
+<div class="spec">
+  <h2>材质配方（ArkTS 与 CSS 同源）</h2>
+  <table>
+    <tr><th>参数</th><th>Thin</th><th>Regular</th><th>Thick</th><th>作用</th></tr>
+    <tr><td><code>radius</code></td><td>16</td><td>24</td><td>34</td><td>模糊半径，决定「厚度」</td></tr>
+    <tr><td><code>saturation</code></td><td>1.6</td><td>1.8</td><td>2.0</td><td>饱和度增益，>1 背景才透色；等于 1 就是灰蒙蒙的磨砂</td></tr>
+    <tr><td><code>brightness</code></td><td>1.04</td><td>1.05</td><td>0.82</td><td>亮度增益；厚面板要压暗才保证文字可读</td></tr>
+    <tr><td>染色 alpha</td><td colspan="3">深色 0.50 / 厚 0.70；浅色 0.65 / 厚 0.85</td><td>染色必须带透明度，否则模糊被实色盖死</td></tr>
+    <tr><td>折射亮边</td><td colspan="3">1px 描边 + 顶部高光条（两端淡出）</td><td>缺这层就是「磨砂塑料」，不像玻璃</td></tr>
+    <tr><td>弥散投影</td><td colspan="3">radius 14 / 22 / 30，offsetY 5 / 8 / 12</td><td>让组件从背景浮起来，不是贴上去</td></tr>
+    <tr><td>按压反馈</td><td colspan="3">scale 0.96 + brightness +0.05（按下提亮）</td><td>「指尖打光」——按下时按钮自己变亮</td></tr>
+  </table>
+</div>
+
+</body>
+</html>

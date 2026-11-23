@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "status": "ok",
+  "producer": {
+    "tool": "recognize_ui_components",
+    "model": "Qwen3_VL_235B_A22B_Instruct",
+    "invocationId": "ce474029-f94b-450f-8bfa-37117dc65140",
+    "createdAt": "2026-11-06T14:05:12.690Z"
+  },
+  "inputs": {
+    "image": {
+      "path": "docs/device/ref-desktop.jpeg",
+      "sha256": "186adb7d33548898b852f4f5a55c6762d51e338483caf5045e1b745577c1c069"
+    },
+    "requirements": {
+      "text": "这是一张鸿蒙智行问界M9车机屏幕截图。请描述：1) 屏幕整体布局与宽高比（是否满屏、有无黑边）2) 顶部/底部状态栏或 Dock 栏内容 3) 应用窗口区域与位置 4) 是否有导航地图悬浮窗",
+      "sha256": "1335ab5a7daca438ce7d09238d4b814e7ddaeffc15b4349d0ace66a0721964ec"
+    }
+  },
+  "analysis": {
+    "canvas": {
+      "width": 1260,
+      "height": 2720
+    },
+    "visible_components": [
+      {
+        "id": "component-1",
+        "name": "智慧音频",
+        "visual_evidence": "屏幕中央偏上位置的蓝色图标，图标内有白色抽象图形，下方标注文字“智慧音频”",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "图标加文字标签的组合符合可点击应用启动器的特征，ArkUI 中 Button 可用于承载此类交互元素"
+          }
+        ]
+      },
+      {
+        "id": "component-2",
+        "name": "App Gallery",
+        "visual_evidence": "位于“智慧音频”下方的红色图标，图标内有白色购物袋图形，下方标注文字“应用市场”",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "标准应用图标样式，具备点击启动功能，适合用 ArkUI Button 组件实现"
+          }
+        ]
+      },
+      {
+        "id": "component-3",
+        "name": "青芒短视频",
+        "visual_evidence": "位于“应用市场”下方的绿色图标，图标内有白色播放三角形，下方标注文字“青芒短视频”",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "视频类应用图标，具备启动功能，ArkUI Button 可承载此类视觉与交互需求"
+          }
+        ]
+      },
+      {
+        "id": "component-4",
+        "name": "电话",
+        "visual_evidence": "屏幕底部 Dock 栏最左侧绿色图标，内含白色电话听筒图形",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "Dock 栏固定应用入口，通常为可点击按钮，ArkUI Button 适用于此类场景"
+          }
+        ]
+      },
+      {
+        "id": "component-5",
+        "name": "信息",
+        "visual_evidence": "屏幕底部 Dock 栏左二蓝色图标，内含白色对话气泡图形",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "标准通讯类应用图标，位于 Dock 栏，适合用 ArkUI Button 实现"
+          }
+        ]
+      },
+      {
+        "id": "component-6",
+        "name": "浏览器",
+        "visual_evidence": "屏幕底部 Dock 栏右二白色图标，内含蓝色地球与连接点图形",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "浏览器应用图标，位于 Dock 栏，ArkUI Button 可用于构建此类固定入口"
+          }
+        ]
+      },
+      {
+        "id": "component-7",
+        "name": "相机",
+        "visual_evidence": "屏幕底部 Dock 栏最右侧白色图标，内含黑色相机镜头图形",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "相机应用图标，位于 Dock 栏，符合 ArkUI Button 的典型使用场景"
+          }
+        ]
+      },
+      {
+        "id": "component-8",
+        "name": "状态栏时间",
+        "visual_evidence": "屏幕左上角显示“16:51”",
+        "component_candidates": [
+          {
+            "name": "Text",
+            "confidence": 0.8,
+            "reason": "纯文本显示，用于展示当前时间，ArkUI Text 组件可实现"
+          }
+        ]
+      },
+      {
+        "id": "component-9",
+        "name": "状态栏网络与电量",
+        "visual_evidence": "屏幕右上角显示“17 B/s”、“6”、“5A”、“100%”及电池图标",
+        "component_candidates": [
+          {
+            "name": "Text",
+            "confidence": 0.7,
+            "reason": "包含多个文本与图标组合，可由多个 Text 组件或结合 Image 组件实现"
+          }
+        ]
+      },
+      {
+        "id": "component-10",
+        "name": "页面指示器",
+        "visual_evidence": "屏幕底部 Dock 栏上方有三个小圆点，中间一个为实心",
+        "component_candidates": [
+          {
+            "name": "PageIndicator",
+            "confidence": 0.8,
+            "reason": "典型页面切换指示器，ArkUI 提供 PageIndicator 组件用于此类场景"
+          }
+        ]
+      }
+    ],
+    "global_observations": [],
+    "uncertainties": []
+  }
+}

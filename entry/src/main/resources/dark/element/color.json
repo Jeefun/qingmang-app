@@ -1,0 +1,43 @@
+{
+  "color": [
+    { "name": "start_window_background", "value": "#100C0E" },
+
+    { "name": "bg", "value": "#100C0E" },
+    { "name": "surface", "value": "#1A1518" },
+    { "name": "surfaceHigh", "value": "#251D21" },
+    { "name": "border", "value": "#33262A" },
+    { "name": "divider", "value": "#2A2024" },
+    { "name": "navActive", "value": "#3B2E2C" },
+    { "name": "navActiveBg", "value": "#3D6ECC54" },
+    { "name": "navActiveFg", "value": "#8FE07A" },
+    { "name": "navActiveGlow", "value": "#336ECC54" },
+    { "name": "roundBtnScrim", "value": "#59000000" },
+
+    { "name": "text", "value": "#F3EDEA" },
+    { "name": "textDim", "value": "#B5A8A2" },
+    { "name": "textFaint", "value": "#7E716C" },
+
+    { "name": "accent", "value": "#E4453F" },
+    { "name": "accentOn", "value": "#FFFFFF" },
+    { "name": "accentDim", "value": "#3A1A1C" },
+    { "name": "accentSoft", "value": "#241417" },
+
+    { "name": "ink", "value": "#F3EDEA" },
+    { "name": "inkOn", "value": "#14100E" },
+    { "name": "chipBg", "value": "#251D21" },
+    { "name": "chipOn", "value": "#F3EDEA" },
+    { "name": "glass", "value": "#33FFFFFF" },
+
+    { "name": "gold", "value": "#F9D46C" },
+    { "name": "goldOn", "value": "#3D2C08" },
+    { "name": "mint", "value": "#71E2D1" },
+    { "name": "lime", "value": "#6ECC54" },
+
+    { "name": "mask", "value": "#000000AA" },
+    { "name": "scrimTop", "value": "#B3000000" },
+    { "name": "scrimBottom", "value": "#00000000" },
+    { "name": "playerBg", "value": "#000000" },
+    { "name": "playerText", "value": "#F7F2EF" },
+    { "name": "trackOff", "value": "#33FFFFFF" }
+  ]
+}

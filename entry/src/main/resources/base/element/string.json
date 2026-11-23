@@ -1,0 +1,36 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "主模块"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "短视频播放入口"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "青芒短视频"
+    },
+    {
+      "name": "datasync_reason",
+      "value": "在设备间接续播放你正在看的剧"
+    },
+    {
+      "name": "EntryFormAbility_label",
+      "value": "青芒续播卡片"
+    },
+    {
+      "name": "EntryFormAbility_desc",
+      "value": "在桌面展示最近观看的剧，点击继续播放"
+    },
+    {
+      "name": "continue_card_name",
+      "value": "继续观看"
+    },
+    {
+      "name": "continue_card_desc",
+      "value": "展示最近观看的剧集，点击继续播放"
+    }
+  ]
+}

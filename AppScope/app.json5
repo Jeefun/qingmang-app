@@ -1,0 +1,13 @@
+{
+  "app": {
+    // 包名不是用户可见名称，刻意保留旧值：改动会被系统视为「另一个应用」，
+    // 无法覆盖升级、本地数据丢失，车机侧若按包名做白名单也会全部失效。
+    // 桌面显示名由下方 $string:app_name 提供，已改为「青芒短视频」。
+    "bundleName": "com.dudu.guoapp.car",
+    "vendor": "dudu",
+    "versionCode": 20261108,
+    "versionName": "1.0.0",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name"
+  }
+}

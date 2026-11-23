@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>底部胶囊 · 导航图标尺寸改动前后</title>
+<style>
+  :root{
+    --ink:#1c1a19; --dim:#6c6560; --line:#e6e2dd; --lime:#6ECC54;
+    --panel:#ffffff; --page:#f4f2ef;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px 30px 40px;background:var(--page);color:var(--ink);
+       font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  h1{font-size:21px;margin:0 0 6px;letter-spacing:.2px}
+  .sub{color:var(--dim);font-size:13px;margin:0 0 20px;max-width:980px}
+  .sub b{color:var(--ink)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:1060px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+         padding:14px 14px 16px;box-shadow:0 2px 12px rgba(30,20,10,.04)}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;
+       background:#eeece9;color:var(--dim);margin-bottom:3px}
+  .tag.new{background:rgba(110,204,84,.16);color:#3d7a2c}
+  .tag.opt{background:#fff3dc;color:#a06a12}
+  .phead{font-size:14px;font-weight:700;margin:6px 0 2px}
+  .pmeta{font-size:11.5px;color:var(--dim);min-height:34px}
+
+  /* 手机底部区域：1vp = 1px，胶囊真实尺寸 218 × 52 */
+  .phone{position:relative;height:186px;margin-top:12px;border-radius:10px;overflow:hidden;
+         background:#f7f5f2}
+  .posters{position:absolute;inset:0;display:grid;
+           grid-template-columns:repeat(3,1fr);grid-auto-rows:62px;gap:8px;padding:10px}
+  .posters i{border-radius:5px;display:block}
+  .p1{background:#c8623c}.p2{background:#2f6f88}.p3{background:#76538f}
+  .p4{background:#3f7a4e}.p5{background:#9c3f55}.p6{background:#b08a33}
+  .p7{background:#2c7f83}.p8{background:#8a5a3c}.p9{background:#5b5a94}
+  .p10{background:#c8623c}.p11{background:#3f7a4e}.p12{background:#76538f}
+
+  .nav{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);
+       display:flex;border-radius:26px;
+       background:rgba(228,224,219,.30);
+       backdrop-filter:blur(32px) saturate(2.0) brightness(1.06);
+       -webkit-backdrop-filter:blur(32px) saturate(2.0) brightness(1.06);
+       border-top:1px solid rgba(255,255,255,.88);
+       border-left:1px solid rgba(255,255,255,.42);
+       border-right:1px solid rgba(255,255,255,.42);
+       border-bottom:1px solid rgba(0,0,0,.14);
+       box-shadow:0 10px 28px rgba(40,28,18,.16);}
+  .nav::before{content:"";position:absolute;top:0;left:6%;width:88%;height:1.5px;
+       background:linear-gradient(90deg,transparent,rgba(255,255,255,.88),transparent)}
+  .item{width:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        gap:3px;border-radius:24px;font-size:10px;color:rgba(90,78,70,.72);}
+  .item.on{background:rgba(255,255,255,.82);border:1px solid rgba(255,255,255,.9);
+           color:#1a1416;font-weight:600;box-shadow:0 3px 12px rgba(0,0,0,.12)}
+  .item svg{display:block;flex:none}
+
+  /* 放大细节：把四个图标按 3× 画出来，只看笔画粗细与占比 */
+  .zoom{margin-top:16px;border-top:1px dashed var(--line);padding-top:12px}
+  .zoom .cap{font-size:11px;color:var(--dim);margin-bottom:8px}
+  .zoomrow{display:flex;justify-content:space-around;align-items:center;min-height:88px}
+
+  table{width:100%;max-width:1060px;border-collapse:collapse;margin-top:22px;font-size:12.5px}
+  th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+  th{background:#efece8;font-weight:700}
+  td.k{font-family:Consolas,monospace;white-space:nowrap;color:#4a4139}
+  .note{max-width:1060px;margin-top:18px;padding:12px 14px;border-left:3px solid var(--lime);
+        background:#fff;border:1px solid var(--line);border-left-width:3px;border-radius:0 8px 8px 0;
+        font-size:12.5px;color:var(--dim)}
+  .note b{color:var(--ink)}
+</style>
+</head>
+<body>
+<h1>底部胶囊 · 导航图标尺寸改动前后</h1>
+<p class="sub">用工程里 <b>真实的 4 个 ic_nav_*.svg</b> 按 1vp = 1px 渲染，背后铺海报色块以还原玻璃状态。
+「小」不只是容器数字小：<b>SVG 图形只占 viewBox 约 68%</b>，叠加 1.8 的细描边和 0.58 的未选中透明度，四个里三个都发虚。</p>
+
+<div class="grid" id="grid"></div>
+
+<table>
+  <tr><th style="width:170px">项</th><th>改前</th><th>改后（已落地）</th><th>为什么</th></tr>
+  <tr><td class="k">NavIcon 尺寸</td><td>硬编码 23vp</td><td>Metrics.floatNavIcon = 27vp</td><td>token 原先定义了 22 却从未被引用；现改为唯一来源，两处导航共用</td></tr>
+  <tr><td class="k">SVG 描边</td><td>stroke-width 1.8</td><td>2.1（base + dark 共 8 个文件）</td><td>1.8/24×23 ≈ 1.7vp，3.5 倍屏下只有 6px，视觉发虚</td></tr>
+  <tr><td class="k">未选中透明度</td><td>0.58</td><td>0.72</td><td>保留主次对比，但不再让 3/4 图标「退到背景里」</td></tr>
+  <tr><td class="k">单项高 / 胶囊 padding</td><td>45 / 3</td><td>48 / 2</td><td>48 + 2×2 = 52，仍等于 Metrics.floatNavHeight，底部留白计算不变</td></tr>
+  <tr><td class="k">图标与文字间距</td><td>Column space 2</td><td>Column space 3</td><td>图标放大 4vp 后 2vp 会显得压字，补 1vp 呼吸感</td></tr>
+  <tr><td class="k">viewBox</td><td>0 0 24 24</td><td>不变</td><td>收紧 viewBox 能再放大约 14%，但 ArkUI 的 SVG 解析器对非零 min-x 未经真机验证，本轮不上（见 C 档演示）</td></tr>
+</table>
+
+<div class="note"><b>状态说明：</b>A = 改动前，B = 本轮已落地（编译已过），C = 仅演示的可选加强档，<b>没有写进工程</b>。
+三档都按真实数值渲染；B 相对 A 的实际笔画尺寸约 +17%，加上描边与对比度，整体视觉重量提升约三成。
+C 档若你真机看后仍觉得偏小，再单独评估要不要上——它改的是 SVG viewBox 语法，属于运行时渲染行为，无真机时不宜盲改。</div>
+
+<script>
+const SHAPES = {
+  '首页':'<path d="M3.9 10.5L12 3.8L20.1 10.5L20.1 20.1L14.5 20.1L14.5 14.4L9.5 14.4L9.5 20.1L3.9 20.1Z"/>',
+  '搜索':'<circle cx="10.8" cy="10.8" r="7"/><path d="M16 16L20.8 20.8"/>',
+  '历史':'<circle cx="12" cy="12" r="8.3"/><path d="M12 6.9V12.3L15.8 14.6"/>',
+  '我的':'<circle cx="12" cy="8" r="3.8"/><path d="M4.9 20.5C5.9 16.4 8.8 14.3 12 14.3C15.2 14.3 18.1 16.4 19.1 20.5"/>'
+};
+const CFG = [
+  {key:'before', tag:'A · 改前', cls:'',      title:'现状', size:23, sw:1.8, op:0.58, itemH:45, pad:3, vb:'0 0 24 24', meta:'容器 23vp · stroke 1.8 · 未选中 0.58 · 项高 45'},
+  {key:'after',  tag:'B · 已落地', cls:'new', title:'本轮修改', size:27, sw:2.1, op:0.72, itemH:48, pad:2, vb:'0 0 24 24', meta:'容器 27vp · stroke 2.1 · 未选中 0.72 · 项高 48'},
+  {key:'plus',   tag:'C · 仅演示', cls:'opt', title:'可选加强（未落地）', size:27, sw:2.1, op:0.72, itemH:48, pad:2, vb:'1.5 1.5 21 21', meta:'B + 收紧 viewBox 至 21×21，图形再放大约 14%'}
+];
+const LABELS = Object.keys(SHAPES);
+
+function svg(name, c, zoom){
+  const s = c.size * (zoom || 1);
+  return '<svg viewBox="'+c.vb+'" width="'+s+'" height="'+s+'" fill="none" stroke="#14100E" '+
+         'stroke-width="'+c.sw+'" stroke-linecap="round" stroke-linejoin="round" '+
+         'style="opacity:'+c.op+'">'+SHAPES[name]+'</svg>';
+}
+function posters(){
+  let h='<div class="posters">';
+  for(let i=1;i<=12;i++) h+='<i class="p'+i+'"></i>';
+  return h+'</div>';
+}
+function nav(c, zoom){
+  let h='<div class="nav" style="padding:'+c.pad+'px 5px">';
+  LABELS.forEach((name,i)=>{
+    h+='<div class="item'+(i===0?' on':'')+'" style="height:'+c.itemH+'px;gap:3px">'+
+       svg(name,c,zoom)+'<span>'+name+'</span></div>';
+  });
+  return h+'</div>';
+}
+function panel(c){
+  let zoomRow='<div class="zoomrow">';
+  LABELS.forEach(name=>{ zoomRow+='<div>'+svg(name,c,3)+'</div>'; });
+  zoomRow+='</div>';
+  return '<div class="panel">'+
+    '<span class="tag '+c.cls+'">'+c.tag+'</span>'+
+    '<div class="phead">'+c.title+'</div>'+
+    '<div class="pmeta">'+c.meta+'</div>'+
+    '<div class="phone">'+posters()+nav(c,1)+'</div>'+
+    '<div class="zoom"><div class="cap">图标放大 3× · 看笔画粗细与 viewBox 留白</div>'+zoomRow+'</div>'+
+  '</div>';
+}
+document.getElementById('grid').innerHTML = CFG.map(panel).join('');
+</script>
+</body>
+</html>

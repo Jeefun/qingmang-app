@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>青芒短视频 · 底部胶囊玻璃材质对比</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 28px 48px;
+    background: #F2F0ED; color: #24201F;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  h1 { font-size: 22px; margin: 0 0 8px; font-weight: 650; }
+  .lead { font-size: 13px; color: #6B625D; line-height: 1.75; max-width: 940px; margin: 0 0 18px; }
+  .lead b { color: #B4472E; font-weight: 600; }
+
+  .toolbar {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 22px; padding: 12px 16px;
+    background: rgba(255,255,255,.72); border: 1px solid rgba(0,0,0,.07);
+    border-radius: 12px;
+  }
+  .toolbar label { font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+  .toolbar input { accent-color: #6ECC54; width: 15px; height: 15px; }
+  .toolbar .note { font-size: 11.5px; color: #8A807A; }
+
+  .stage { display: flex; gap: 26px; flex-wrap: wrap; }
+  .case { flex: 1 1 340px; min-width: 320px; max-width: 470px; }
+  .case h2 { font-size: 14px; margin: 0 0 3px; font-weight: 600; }
+  .case .tag { font-size: 11.5px; color: #8A807A; margin-bottom: 12px; }
+
+  .phone {
+    position: relative; width: 100%; aspect-ratio: 360 / 560;
+    border-radius: 26px; overflow: hidden;
+    background: #F7F5F2;
+    border: 1px solid rgba(0,0,0,.10);
+    box-shadow: 0 18px 44px rgba(0,0,0,.13);
+  }
+
+  /* 背后内容：一排彩色海报，模拟首页信息流。
+     关掉它就是「纯色留白」——也就是之前导航条背后真实的样子 */
+  .content { position: absolute; inset: 0; padding: 18px 16px 0; }
+  .content h3 { font-size: 17px; margin: 0 0 4px; font-weight: 650; }
+  .content .sub { font-size: 10px; color: #9A918B; margin-bottom: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .poster { aspect-ratio: 3/4; border-radius: 7px; position: relative; overflow: hidden; }
+  .poster span {
+    position: absolute; bottom: 5px; left: 5px; right: 5px;
+    font-size: 8px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.7);
+  }
+  .p1 { background: linear-gradient(150deg,#D98A5F,#7A3D33); }
+  .p2 { background: linear-gradient(150deg,#4E8FB0,#24465E); }
+  .p3 { background: linear-gradient(150deg,#9A78B4,#4B3A68); }
+  .p4 { background: linear-gradient(150deg,#7EAC63,#33532C); }
+  .p5 { background: linear-gradient(150deg,#C86B72,#6A2D3B); }
+  .p6 { background: linear-gradient(150deg,#D4A851,#7A5A20); }
+  .p7 { background: linear-gradient(150deg,#5FA8A0,#22565B); }
+  .p8 { background: linear-gradient(150deg,#B0806A,#59382E); }
+  .p9 { background: linear-gradient(150deg,#7C86C0,#333A6B); }
+
+  /* ---------- 旧参数 ---------- */
+  .nav {
+    position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%);
+    width: 232px; height: 58px; border-radius: 26px;
+    display: flex; align-items: center; justify-content: space-around;
+    z-index: 2;
+  }
+  .nav .item { font-size: 10px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .nav .item i { font-size: 15px; font-style: normal; }
+  .nav .item.on {
+    width: 52px; height: 46px; border-radius: 23px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.92);
+  }
+
+  /* 改前：65% 白薄纱把模糊盖死；等比 1px 白边；1px 高光 */
+  .nav.old {
+    background: rgba(255,255,255,.65);
+    backdrop-filter: blur(24px) saturate(1.8) brightness(1.05);
+    -webkit-backdrop-filter: blur(24px) saturate(1.8) brightness(1.05);
+    border: 1px solid rgba(255,255,255,.25);
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+    color: #4A423E;
+  }
+  .nav.old::before {
+    content: ""; position: absolute; top: 1px; left: 14%; width: 72%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.4), transparent);
+  }
+
+  /* 改后：30% 暖灰薄纱 + 更强模糊/饱和度；上亮下暗非对称边；1.5vp 高光 */
+  .nav.new {
+    background: rgba(228,224,219,.30);
+    backdrop-filter: blur(32px) saturate(2.0) brightness(1.06);
+    -webkit-backdrop-filter: blur(32px) saturate(2.0) brightness(1.06);
+    border: 1px solid rgba(255,255,255,.40);
+    border-top-color: rgba(255,255,255,.55);
+    border-bottom-color: rgba(0,0,0,.14);
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    color: #3A332F;
+  }
+  .nav.new::before {
+    content: ""; position: absolute; top: 0; left: 6%; width: 88%; height: 1.5px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.55) 42%, transparent);
+  }
+  .nav.new::after {
+    content: ""; position: absolute; bottom: 0; left: 11%; width: 78%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,0,0,.10) 50%, transparent);
+  }
+  .phone.no-content .content { display: none; }
+
+  /* ---------- 参数表 ---------- */
+  table { width: 100%; border-collapse: collapse; margin-top: 26px; font-size: 12.5px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,.06); }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #ECE9E5; }
+  th { background: #FAF9F7; font-weight: 600; color: #5C534E; }
+  tr:last-child td { border-bottom: 0; }
+  td.code { font-family: Consolas, monospace; font-size: 11.5px; color: #3E6E33; }
+  td.old-c { color: #A2604B; }
+  .foot { margin-top: 22px; font-size: 12px; color: #6B625D; line-height: 1.8; max-width: 940px; }
+  .foot b { color: #24201F; }
+</style>
+</head>
+<body>
+
+<h1>底部胶囊 · 液态玻璃改动前后</h1>
+<p class="lead">
+  你反馈「看不出玻璃材质」，排查到两个叠加原因：<b>① 染色太实</b>——旧参数用 65% 不透明的白做薄纱，把后面的模糊层整个盖住了；
+  <b>② 背后没有内容</b>——内容区给胶囊留了 100+vp 底部空白，对纯色做模糊，结果仍然是纯色。
+  下面的开关可以复现第 ② 点：勾掉「背后有彩色内容」，两种参数都看不出玻璃。
+</p>
+
+<div class="toolbar">
+  <label><input type="checkbox" id="hasContent" checked> 背后有彩色内容（首页海报滚过）</label>
+  <span class="note">关掉 = 内容区留白时的真实状态，也就是之前你看不到效果的原因</span>
+</div>
+
+<div class="stage">
+  <div class="case">
+    <h2>改前</h2>
+    <div class="tag">blur 24 · sat 1.8 · 65% 纯白染色 · 等比白边 · 1px 高光</div>
+    <div class="phone" id="phoneOld">
+      <div class="content">
+        <h3>今晚，看点短的</h3>
+        <div class="sub">54 部 · 每日更新</div>
+        <div class="grid">
+          <div class="poster p1"><span>退婚后我成了首富</span></div>
+          <div class="poster p2"><span>出租车诡事</span></div>
+          <div class="poster p3"><span>她的秘密花园</span></div>
+          <div class="poster p4"><span>重生之商海</span></div>
+          <div class="poster p5"><span>夜色边缘</span></div>
+          <div class="poster p6"><span>长风渡</span></div>
+          <div class="poster p7"><span>深海来信</span></div>
+          <div class="poster p8"><span>旧巷人家</span></div>
+          <div class="poster p9"><span>星轨之下</span></div>
+          <div class="poster p3"><span>雾中列车</span></div>
+          <div class="poster p1"><span>春日迟迟</span></div>
+          <div class="poster p7"><span>无声之城</span></div>
+        </div>
+      </div>
+      <div class="nav old">
+        <div class="item on"><i>⌂</i>首页</div>
+        <div class="item"><i>⌕</i>搜索</div>
+        <div class="item"><i>◷</i>历史</div>
+        <div class="item"><i>☺</i>我的</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="case">
+    <h2>改后</h2>
+    <div class="tag">blur 32 · sat 2.0 · 30% 暖灰染色 · 上亮下暗边 · 1.5vp 高光</div>
+    <div class="phone" id="phoneNew">
+      <div class="content">
+        <h3>今晚，看点短的</h3>
+        <div class="sub">54 部 · 每日更新</div>
+        <div class="grid">
+          <div class="poster p1"><span>退婚后我成了首富</span></div>
+          <div class="poster p2"><span>出租车诡事</span></div>
+          <div class="poster p3"><span>她的秘密花园</span></div>
+          <div class="poster p4"><span>重生之商海</span></div>
+          <div class="poster p5"><span>夜色边缘</span></div>
+          <div class="poster p6"><span>长风渡</span></div>
+          <div class="poster p7"><span>深海来信</span></div>
+          <div class="poster p8"><span>旧巷人家</span></div>
+          <div class="poster p9"><span>星轨之下</span></div>
+          <div class="poster p3"><span>雾中列车</span></div>
+          <div class="poster p1"><span>春日迟迟</span></div>
+          <div class="poster p7"><span>无声之城</span></div>
+        </div>
+      </div>
+      <div class="nav new">
+        <div class="item on"><i>⌂</i>首页</div>
+        <div class="item"><i>⌕</i>搜索</div>
+        <div class="item"><i>◷</i>历史</div>
+        <div class="item"><i>☺</i>我的</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<table>
+  <tr><th>参数</th><th>改前</th><th>改后</th><th>为什么</th></tr>
+  <tr><td>tint（薄纱染色）</td><td class="old-c code">#A6FFFFFF（65% 白）</td><td class="code">#4DE4E0DB（30% 暖灰）</td><td>白玻璃叠在暖白背景上等于隐形；略深的暖灰反而能看出「一块比纸略沉的磨砂」</td></tr>
+  <tr><td>blurRadius</td><td class="old-c code">24</td><td class="code">32</td><td>24 以下在手机上只是「一层薄雾」，看不到折射</td></tr>
+  <tr><td>saturation</td><td class="old-c code">1.8</td><td class="code">2.0</td><td>让背后海报的颜色透进玻璃，这是「液态」感的关键</td></tr>
+  <tr><td>描边</td><td class="old-c code">等比 1px 白</td><td class="code">上亮 / 下暗 非对称</td><td>玻璃是上方进光、下方出光；等比白边只是一圈描边</td></tr>
+  <tr><td>上沿高光</td><td class="old-c code">1vp · 72% 宽</td><td class="code">1.5vp · 88% 宽</td><td>3.5 倍屏下 1vp 稀释后几乎看不见</td></tr>
+</table>
+
+<p class="foot">
+  <b>还有一个结构性限制要如实说明：</b>内容区为了避免最后一行被胶囊挡住，底部保留了完整留白。
+  所以滚到列表最底部时，胶囊背后确实是纯背景色，此时任何玻璃参数都看不出通透感——这是 iOS / Android 同类胶囊导航的共有现象。
+  真正能看出玻璃的时刻是<b>滚动过程中海报从胶囊背后穿过</b>。上面开关复现的就是这两种状态。
+  <br>这是 HTML 复刻预览，参数与 <code>theme/Glass.ets</code> 一一对应，但不能替代真机对 <code>backgroundEffect</code> 实际模糊质量的验证。
+</p>
+
+<script>
+  document.getElementById('hasContent').addEventListener('change', (e) => {
+    const on = e.target.checked;
+    document.getElementById('phoneOld').classList.toggle('no-content', !on);
+    document.getElementById('phoneNew').classList.toggle('no-content', !on);
+  });
+</script>
+</body>
+</html>

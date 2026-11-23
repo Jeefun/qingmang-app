@@ -1,0 +1,18 @@
+{
+  "forms": [
+    {
+      "name": "continue_card",
+      "displayName": "$string:continue_card_name",
+      "description": "$string:continue_card_desc",
+      "src": "./ets/widget/pages/ContinueCard.ets",
+      "uiSyntax": "arkts",
+      "isDefault": true,
+      "updateEnabled": false,
+      "supportDimensions": [
+        "1*2",
+        "2*4"
+      ],
+      "defaultDimension": "2*4"
+    }
+  ]
+}

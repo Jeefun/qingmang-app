@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>播放页虚拟预览 · guoapp-harmony</title>
+<style>
+  /* ============================================================
+     这不是真机渲染，也不是模拟器。
+     它是「按 ArkTS 源码的布局参数 1:1 复刻」的 HTML 预览：
+     尺寸取自 Theme.ets（1260px / 360vp，比例 3.5）、PlayerView.ets 的
+     固定常量（视频区 58% 屏高、控件高度、面板间距）、颜色取自
+     resources/base/element/color.json。
+     用途：在没有设备/模拟器时，肉眼核对「有没有、在不在、挤不挤」。
+     不能替代：真实字体度量、系统滚动回弹、AVPlayer 真实画面比例回填。
+     ============================================================ */
+
+  :root {
+    --bg: #F7F5F2;
+    --surface: #FFFFFF;
+    --text: #1A1512;
+    --text-dim: #6E635C;
+    --text-faint: #A0938B;
+    --accent: #C8161D;
+    --accent-soft: #FBEDEC;
+    --chip-bg: #EFEAE4;
+    --divider: #EDE8E2;
+    --player-bg: #0A0A0C;
+    --player-text: #F7F2EF;
+    --safe-top: 38px;
+    --safe-bottom: 20px;
+    --outline: rgba(0, 170, 255, .9);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    margin: 0;
+    background: #17181A;
+    color: #E8E8E8;
+    font-family: "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 26px 20px 40px;
+    flex-wrap: wrap;
+  }
+
+  /* ---------- 手机外框：内部按 vp 排版，整体 scale 放大便于观看 ---------- */
+  .phone-wrap {
+    width: 540px;
+    height: 1166px;
+    flex: 0 0 auto;
+  }
+
+  .phone {
+    width: 360px;
+    height: 777px;
+    transform: scale(1.5);
+    transform-origin: top left;
+    border-radius: 0;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+  }
+
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+
+  /* ---------- 视频区 ---------- */
+  .video {
+    position: relative;
+    width: 100%;
+    height: 450px;          /* 777 × 0.58，竖屏片源上限 */
+    background: var(--player-bg);
+    overflow: hidden;
+    flex: 0 0 auto;
+    transition: height .28s cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .screen.full .video { height: 777px; }
+
+  /* surface 按视频真实比例 contain：9:16 竖屏 → 253×450（半屏）/ 360×640（全屏） */
+  .vbox {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 253px;
+    height: 450px;
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+    transition: width .28s cubic-bezier(.22, 1, .36, 1), height .28s cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .screen.full .vbox { width: 360px; height: 640px; }
+
+  /* 占位画面：真实播放时这里是 AVPlayer 解码后的帧 */
+  .scene {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(120% 80% at 50% 12%, #6E4B3A 0%, #3A2A25 42%, #14100F 100%),
+      #14100F;
+  }
+
+  .scene::before {
+    content: "";
+    position: absolute;
+    left: 18%;
+    right: 18%;
+    top: 26%;
+    height: 46%;
+    border-radius: 50% 50% 44% 44% / 46% 46% 54% 54%;
+    background: radial-gradient(60% 60% at 50% 34%, rgba(255, 214, 178, .34), rgba(255, 214, 178, 0) 72%);
+    filter: blur(1px);
+  }
+
+  .scene::after {
+    content: "";
+  }
+
+  /* ---------- 弹幕层 ---------- */
+  /* 弹幕层就挂在画面盒子里：尺寸=真实画面、overflow 裁切，
+     这样竖屏片源的左右黑边上永远不会出现弹幕文字 */
+  .dm-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 86px;              /* 顶栏底边之下（safeTop 38 + 48） */
+    bottom: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transition: top .28s cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .screen.full .dm-layer {
+    top: 17px;              /* 全屏时画面上下留黑 68.5vp，等效起点 86 - 68.5 */
+  }
+
+  .dm {
+    position: absolute;
+    left: 0;
+    white-space: nowrap;
+    font-size: 15px;
+    font-weight: 500;
+    color: #FFFFFF;
+    opacity: .9;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, .7);
+    will-change: transform;
+  }
+
+  .dm-hint {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: rgba(255, 255, 255, .85);
+    background: rgba(0, 0, 0, .45);
+    padding: 5px 12px;
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity .2s linear;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .dm-hint.show { opacity: 1; }
+
+  /* ---------- 渐变蒙层 ---------- */
+  .scrim-top,
+  .scrim-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 1;
+    transition: opacity 220ms linear;
+  }
+
+  .scrim-top {
+    top: 0;
+    height: calc(var(--safe-top) + 96px);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, .78), rgba(0, 0, 0, 0));
+  }
+
+  .scrim-bottom {
+    bottom: 0;
+    height: 132px;
+    background: linear-gradient(to top, rgba(0, 0, 0, .82), rgba(0, 0, 0, 0));
+  }
+
+  .video.ctrl-hidden .scrim-top,
+  .video.ctrl-hidden .scrim-bottom { opacity: 0; }
+
+  /* ---------- 控件通用 ---------- */
+  .ctrl {
+    position: absolute;
+    z-index: 5;
+    transition: opacity 220ms linear, transform 220ms linear;
+  }
+
+  .video.ctrl-hidden .ctrl {
+    opacity: 0;
+    transform: translateY(6px);   /* 淡出同时下沉，比整块消失自然 */
+    pointer-events: none;
+  }
+
+  .round {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .18);
+    backdrop-filter: blur(10px);
+    transition: transform 120ms ease-out, background 120ms ease-out;
+  }
+
+  .round:active { transform: scale(.9); background: rgba(255, 255, 255, .25); }
+
+  .round svg { width: 20px; height: 20px; display: block; }
+  .round.s34 { width: 34px; height: 34px; }
+  .round.s36 { width: 36px; height: 36px; }
+
+  /* 顶栏 */
+  .topbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(var(--safe-top) + 6px) 15px 0;
+    transition: opacity 220ms linear, transform 220ms linear;
+  }
+
+  .video.ctrl-hidden .topbar { opacity: 0; transform: translateY(6px); }
+
+  .topbar .title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--player-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 半屏不显示标题，但要占位：否则右侧三个按钮会挤到返回键旁边（真实实现是空 Text + layoutWeight） */
+  .screen:not(.full) .topbar .title { visibility: hidden; }
+
+  .quality {
+    height: 28px;
+    padding: 0 11px;
+    line-height: 28px;
+    border-radius: 14px;
+    font-size: 12px;
+    color: var(--player-text);
+    background: rgba(0, 0, 0, .3);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, .14);
+    transition: transform 120ms ease-out;
+  }
+
+  .quality:active { transform: scale(.94); }
+
+  /* 中央播放键 */
+  .center-play {
+    left: 50%;
+    top: 50%;
+    width: 46px;
+    height: 46px;
+    margin: -23px 0 0 -23px;
+    z-index: 5;
+    background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .4);
+    transition: transform 130ms ease-out, opacity 220ms linear;
+  }
+
+  .center-play:active { transform: scale(.9); }
+  .center-play svg { width: 20px; height: 20px; }
+
+  /* 底部控制区 */
+  .bottombar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    padding-bottom: var(--safe-bottom);
+    transition: opacity 220ms linear, transform 220ms linear;
+  }
+
+  .screen:not(.full) .bottombar { padding-bottom: 0; }
+
+  .video.ctrl-hidden .bottombar { opacity: 0; transform: translateY(6px); }
+
+  .progress-row {
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+  }
+
+  .t-time {
+    width: 42px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, .85);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .t-time.right { text-align: right; }
+
+  .track-wrap {
+    flex: 1;
+    height: 40px;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .track {
+    width: 100%;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .35);
+    position: relative;
+  }
+
+  .track .fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 18%;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .track .knob {
+    position: absolute;
+    left: 18%;
+    top: 50%;
+    width: 13px;
+    height: 13px;
+    margin: -6.5px 0 0 -6.5px;
+    border-radius: 50%;
+    background: var(--player-text);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+  }
+
+  .btn-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 15px 8px;
+  }
+
+  .btn-row .spacer { flex: 1; }
+
+  .pill {
+    height: 34px;
+    padding: 0 13px;
+    border-radius: 17px;
+    font-size: 13px;
+    color: var(--player-text);
+    background: rgba(0, 0, 0, .3);
+    border: 1px solid rgba(255, 255, 255, .16);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    transition: transform 120ms ease-out, background 120ms ease-out;
+  }
+
+  .pill:active { transform: scale(.94); background: rgba(255, 255, 255, .22); }
+  .pill.on { color: #FFF; background: rgba(200, 22, 29, .8); border-color: rgba(255, 255, 255, .3); }
+
+  /* ---------- 下半屏：Tab + 简介 ---------- */
+  .tabbar {
+    height: 46px;
+    display: flex;
+    border-bottom: 1px solid var(--divider);
+    flex: 0 0 auto;
+    transition: opacity .2s linear;
+  }
+
+  .screen.full .tabbar,
+  .screen.full .desc { display: none; }
+
+  .tab {
+    flex: 1;
+    height: 46px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    font-size: 15px;
+    color: var(--text-faint);
+  }
+
+  .tab.on { color: var(--text); font-weight: 500; }
+
+  .tab i {
+    display: block;
+    height: 3px;
+    border-radius: 2px;
+    width: 6px;
+    background: transparent;
+    transition: width 200ms ease-out, background 200ms ease-out;
+  }
+
+  .tab.on i { width: 20px; background: var(--accent); }
+
+  .desc {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .desc h1 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .tags { display: flex; gap: 6px; align-items: center; }
+
+  .tag {
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 22px;
+    color: var(--text-dim);
+    background: var(--chip-bg);
+    white-space: nowrap;
+  }
+
+  .tag.accent { color: var(--accent); background: var(--accent-soft); }
+
+  .summary {
+    font-size: 14px;
+    line-height: 22px;
+    color: var(--text-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .more { font-size: 12px; color: var(--accent); }
+
+  /* ---------- 设置面板 ---------- */
+  .mask {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .54);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 280ms cubic-bezier(.22, 1, .36, 1);
+    z-index: 20;
+  }
+
+  .sheet {
+    position: absolute;
+    left: 15px;
+    right: 15px;
+    bottom: calc(var(--safe-bottom) + 12px);
+    z-index: 21;
+    border-radius: 20px;
+    padding: 12px 16px 16px;
+    background: rgba(19, 16, 18, .90);
+    backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .6);
+    opacity: 0;
+    transform: translateY(460px);
+    pointer-events: none;
+    transition: transform 280ms cubic-bezier(.22, 1, .36, 1), opacity 280ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .open .mask { opacity: 1; pointer-events: auto; }
+  .open .sheet { opacity: 1; transform: translateY(0); pointer-events: auto; }
+
+  .sheet-head { display: flex; align-items: center; }
+
+  .sheet-head h2 {
+    margin: 0;
+    flex: 1;
+    font-size: 15px;
+    font-weight: 700;
+    color: #F2FFFFFF;
+  }
+
+  .close {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 120ms ease-out, background 120ms ease-out;
+  }
+
+  .close:active { transform: scale(.9); background: rgba(255, 255, 255, .22); }
+  .close svg { width: 14px; height: 14px; }
+
+  .sheet-body {
+    max-height: 430px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    margin-top: 10px;
+  }
+
+  .sheet-body::-webkit-scrollbar { display: none; }
+
+  .sec {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, .55);
+    margin: 4px 0 6px;
+  }
+
+  .grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .chip {
+    height: 32px;
+    padding: 0 14px;
+    min-width: 64px;
+    border-radius: 9px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, .9);
+    background: rgba(255, 255, 255, .12);
+    transition: transform 110ms ease-out, background 110ms ease-out, color 110ms ease-out;
+  }
+
+  .chip:active { transform: scale(.95); }
+  .chip.on { background: var(--accent); color: #FFF; font-weight: 500; }
+
+  .chip.flex { flex: 1; min-width: 0; padding: 0 8px; }
+
+  .row {
+    display: flex;
+    align-items: center;
+    height: 42px;
+    gap: 8px;
+  }
+
+  .row .label { font-size: 14px; color: rgba(255, 255, 255, .9); }
+  .row .grow { flex: 1; }
+  .row .state { font-size: 11px; color: rgba(255, 255, 255, .48); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .row-label {
+    width: 58px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, .7);
+    flex: 0 0 auto;
+  }
+
+  .switch {
+    width: 40px;
+    height: 24px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .22);
+    position: relative;
+    transition: background 160ms ease-out;
+    flex: 0 0 auto;
+  }
+
+  .switch::after {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #FFF;
+    transition: transform 160ms cubic-bezier(.22, 1, .36, 1);
+  }
+
+  .switch.on { background: var(--accent); }
+  .switch.on::after { transform: translateX(16px); }
+
+  .hr {
+    height: 1px;
+    background: rgba(255, 255, 255, .12);
+    margin: 2px 0;
+  }
+
+  .slider-row { display: flex; align-items: center; height: 38px; gap: 10px; }
+
+  .slider {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .2);
+    position: relative;
+  }
+
+  .slider .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 88%; background: var(--accent); border-radius: 2px; }
+  .slider .knob {
+    position: absolute; left: 88%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px;
+    border-radius: 50%; background: #FFF;
+  }
+
+  .slider-row .val { width: 38px; text-align: right; font-size: 11px; color: rgba(255, 255, 255, .55); }
+
+  .chip-row { display: flex; gap: 6px; align-items: center; }
+
+  /* ---------- 标注层 ---------- */
+  .anno { position: absolute; inset: 0; z-index: 30; pointer-events: none; display: none; }
+  .screen.anno-on .anno { display: block; }
+
+  .mark {
+    position: absolute;
+    border: 1px dashed var(--outline);
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0);
+  }
+
+  .mark::after {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 3px;
+    font-size: 9px;
+    line-height: 1;
+    color: #001018;
+    background: var(--outline);
+    padding: 3px 5px;
+    border-radius: 4px;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+
+  .mark.up::after { top: auto; bottom: 100%; margin: 0 0 3px; }
+  .mark.right::after { left: auto; right: 0; }
+
+  /* ---------- 右侧说明 ---------- */
+  aside {
+    width: 380px;
+    max-width: 100%;
+    color: #C9C9C9;
+    font-size: 13px;
+    line-height: 1.7;
+    padding-top: 4px;
+  }
+
+  aside h3 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    color: #FFF;
+    font-weight: 600;
+  }
+
+  aside p { margin: 0 0 12px; }
+
+  .warn {
+    border-left: 3px solid #E0A800;
+    background: rgba(224, 168, 0, .1);
+    padding: 10px 12px;
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+    color: #F0D79A;
+  }
+
+  .controls-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .cbtn {
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 17px;
+    border: 1px solid #3A3C40;
+    background: #202225;
+    color: #DDD;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: background 120ms, transform 120ms, border-color 120ms;
+    font-family: inherit;
+  }
+
+  .cbtn:hover { background: #2A2D31; }
+  .cbtn:active { transform: scale(.95); }
+  .cbtn.on { background: #C8161D; border-color: #C8161D; color: #FFF; }
+
+  dl { margin: 0; }
+  dt { color: #FFF; font-size: 12.5px; margin-top: 10px; }
+  dd { margin: 2px 0 0; color: #A9A9A9; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone-wrap">
+    <div class="phone">
+      <div class="screen" id="screen">
+
+        <!-- ================= 视频区 ================= -->
+        <div class="video" id="video">
+          <div class="vbox">
+            <div class="scene"></div>
+            <div class="dm-layer" id="dmLayer"></div>
+          </div>
+
+          <div class="dm-hint" id="dmHint">本集 12 条弹幕</div>
+
+          <div class="scrim-top"></div>
+          <div class="scrim-bottom"></div>
+
+          <!-- 顶栏：返回（全屏）/ 标题（全屏）/ 弹幕 / 画质 / 设置 -->
+          <div class="topbar">
+            <div class="round s36" id="btnBack">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F7F2EF" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+            </div>
+            <div class="title">闪婚后，她被大佬宠上天</div>
+            <div class="round s34" id="btnDm" title="弹幕开关">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F7F2EF" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2.5" y="5" width="19" height="13" rx="3"/>
+                <path d="M7 10.5h10M7 14h6"/>
+              </svg>
+            </div>
+            <div class="quality" id="btnQuality">1080P</div>
+            <div class="round s34" id="btnSetTop" title="播放设置">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F7F2EF" stroke-width="1.8"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3.2"/>
+                <path d="M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.03z"/>
+              </svg>
+            </div>
+          </div>
+
+          <div class="ctrl center-play" id="btnPlay">
+            <svg viewBox="0 0 24 24" fill="#F7F2EF"><path d="M6 4.5l13 7.5-13 7.5z"/></svg>
+          </div>
+
+          <!-- 底部控件 -->
+          <div class="bottombar">
+            <div class="progress-row">
+              <div class="t-time" id="tCur">02:14</div>
+              <div class="track-wrap">
+                <div class="track"><div class="fill" id="fill"></div><div class="knob" id="knob"></div></div>
+              </div>
+              <div class="t-time right">12:40</div>
+            </div>
+            <div class="btn-row">
+              <div class="round s34"><svg viewBox="0 0 24 24" fill="#F7F2EF"><path d="M7 5h2v14H7zM18 5v14l-8-7z"/></svg></div>
+              <div class="round s34"><svg viewBox="0 0 24 24" fill="#F7F2EF"><path d="M15 5h2v14h-2zM6 5l8 7-8 7z"/></svg></div>
+              <div class="spacer"></div>
+              <div class="pill" id="pillPortrait">竖屏全屏</div>
+              <div class="pill" id="pillSpeed">1.0x</div>
+              <div class="round s34" id="btnSetBottom" title="播放设置">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#F7F2EF" stroke-width="1.8"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="3.2"/>
+                  <path d="M19.4 14.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.56-1.11 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.03z"/>
+                </svg>
+              </div>
+              <div class="round s34" id="btnFull" title="全屏">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#F7F2EF" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= 下半屏 ================= -->
+        <div class="tabbar">
+          <div class="tab on" id="tab0">简介<i></i></div>
+          <div class="tab" id="tab1">选集<i></i></div>
+        </div>
+
+        <div class="desc">
+          <h1>闪婚后，她被大佬宠上天</h1>
+          <div class="tags">
+            <span class="tag accent">更新至 24 集</span>
+            <span class="tag">共 24 集</span>
+            <span class="tag">都市 · 逆袭 · 甜宠</span>
+          </div>
+          <div class="summary">
+            一场意外的闪婚，让职场打工人苏晚嫁给了传闻中喜怒无常的集团总裁。
+            她只想安稳过日子，他却步步紧逼，把她的每一份退让都当成默许……
+          </div>
+          <div class="more">展开全部</div>
+        </div>
+
+        <!-- ================= 设置面板 ================= -->
+        <div class="mask" id="mask"></div>
+        <div class="sheet" id="sheet">
+          <div class="sheet-head">
+            <h2>播放设置</h2>
+            <div class="close" id="btnClose">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#F7F2EF" stroke-width="2.4"
+                   stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </div>
+          </div>
+
+          <div class="sheet-body">
+            <div class="sec">播放速度</div>
+            <div class="grid" id="speedGrid">
+              <div class="chip">0.75x</div>
+              <div class="chip on">1.0x</div>
+              <div class="chip">1.5x</div>
+              <div class="chip">1.75x</div>
+              <div class="chip">2.0x</div>
+              <div class="chip">2.5x</div>
+              <div class="chip">3.0x</div>
+              <div class="chip">4.0x</div>
+              <div class="chip">5.0x</div>
+            </div>
+
+            <div class="sec">画质</div>
+            <div class="chip-row" style="margin-bottom:10px">
+              <div class="chip flex on">自动</div>
+              <div class="chip flex">1080P</div>
+              <div class="chip flex">720P</div>
+            </div>
+
+            <div class="row">
+              <span class="label">自动连播下一集</span>
+              <span class="grow"></span>
+              <div class="switch on" id="swAuto"></div>
+            </div>
+
+            <div class="hr"></div>
+
+            <div class="row">
+              <span class="label">弹幕</span>
+              <span class="grow"></span>
+              <span class="state" id="dmState">已加载 12 条官方弹幕</span>
+              <div class="switch on" id="swDm"></div>
+            </div>
+
+            <div class="slider-row">
+              <span class="row-label">不透明度</span>
+              <div class="slider"><div class="fill"></div><div class="knob"></div></div>
+              <span class="val">90%</span>
+            </div>
+
+            <div class="chip-row" style="margin-bottom:10px">
+              <span class="row-label">字号</span>
+              <div class="chip flex" data-size="13">小</div>
+              <div class="chip flex on" data-size="15">中</div>
+              <div class="chip flex" data-size="18">大</div>
+            </div>
+
+            <div class="chip-row">
+              <span class="row-label">区域</span>
+              <div class="chip flex">顶部</div>
+              <div class="chip flex on">中部</div>
+              <div class="chip flex">全屏</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= 标注（位置由脚本按真实元素算，不靠手写坐标） ================= -->
+        <div class="anno" id="anno"></div>
+
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <h3>这是「看得见」的虚拟预览，不是模拟器</h3>
+
+    <div class="warn">
+      先说结论：这台机器上 <b>DevEco 模拟器跑不起来</b>。<br>
+      实测 <code>HypervisorPresent=False</code>（Hyper-V 未启用），而 HarmonyOS 模拟器必须依赖它；
+      同时模拟器镜像一个都没下载（<code>imageList</code> 全是 <code>downloaded:false</code>，最新是
+      HarmonyOS 7.0.0(26.0.0)，与你工程的 API 26 对得上），协议也还没同意。
+      启用 Hyper-V 要管理员权限 + 重启一次，我这边做不了。
+    </div>
+
+    <p>所以下面这份是<b>按源码参数复刻的 HTML 预览</b>：尺寸取自 <code>Theme.ets</code>（1260px / 360vp，比例 3.5），
+       控件高度、视频区 58% 屏高、弹幕 8.2s 穿屏、轨道行高 24vp 都照抄 <code>PlayerView.ets</code> 的常量，
+       颜色取自 <code>color.json</code>。用来核对「有没有、在不在、挤不挤」，够用；
+       但字体度量、真实画面比例回填、系统手势这些，仍要真机。</p>
+
+    <div class="controls-box">
+      <button class="cbtn on" id="cHalf">半屏</button>
+      <button class="cbtn" id="cFull">全屏</button>
+      <button class="cbtn on" id="cDm">弹幕开</button>
+      <button class="cbtn" id="cSheet">设置面板</button>
+      <button class="cbtn" id="cAnno">标注</button>
+      <button class="cbtn" id="cPlay">暂停</button>
+    </div>
+
+    <dl>
+      <dt>可以直接点的东西</dt>
+      <dd>齿轮（顶栏/底栏都行）→ 面板滑入；弹幕图标 → 收/开弹幕；中央大按钮 → 暂停（弹幕会跟着停）；全屏键 → 切换形态。</dd>
+
+      <dt>重点看这三处</dt>
+      <dd>1. 全屏顶栏现在有齿轮了（原来完全没有设置入口）。</dd>
+      <dd>2. 弹幕在 9:16 竖屏片源上只占画面上部 55%，不压字幕区。</dd>
+      <dd>3. 面板限高 404vp 可滚，字号/区域/不透明度都在里面，不用再翻小菜单。</dd>
+    </dl>
+  </aside>
+</div>
+
+<script>
+/* ============================================================
+   弹幕引擎：照搬 PlayerView.ets 的规则
+   - 33ms 推进（这里用 rAF，视觉等价）
+   - 一条弹幕 8200ms 从左走到右（速度 = 容器宽 / 8200）
+   - 行高 = 字号 + 9；轨道数 = floor(区域高 / 行高)，上限 9
+   - 轨道占用避让：上一条尾巴还没进入画面就不复用该轨道
+   ============================================================ */
+const TRAVEL_MS = 8200;
+const LINE_GAP = 9;
+const TICK = 33;
+
+const POOL = [
+  { t: 300, text: '第一集就上头' },
+  { t: 1600, text: '这男主也太帅了吧' },
+  { t: 2900, text: '前方高能' },
+  { t: 4200, text: '哈哈哈哈哈哈' },
+  { t: 5300, text: '剧情我猜到了' },
+  { t: 6100, text: '快跑！' },
+  { t: 7400, text: '女主演技在线' },
+  { t: 8800, text: '这个转折绝了' },
+  { t: 10200, text: '妈妈问我为什么跪着看' },
+  { t: 11600, text: '终于等到更新' },
+  { t: 13200, text: '这波操作我给满分' },
+  { t: 14800, text: '导演懂我' }
+];
+
+const screenEl = document.getElementById('screen');
+const videoEl = document.getElementById('video');
+const layerEl = document.getElementById('dmLayer');
+const hintEl = document.getElementById('dmHint');
+
+let dmOn = true;
+let playing = true;
+let dmSize = 15;
+let dmArea = 0.55;
+let posMs = 0;
+let lastTs = 0;
+let cursor = 0;
+let seq = 0;
+const live = [];
+
+function areaRect() {
+  return { w: layerEl.clientWidth, h: layerEl.clientHeight };
+}
+
+function laneCount() {
+  const r = areaRect();
+  let n = Math.floor((r.h * dmArea / (dmSize + LINE_GAP)));
+  if (n < 1) n = 1;
+  if (n > 9) n = 9;
+  return n;
+}
+
+function laneY(lane) {
+  // 与 ArkTS 一致：danmakuTop + lane × 行高，不做垂直居中
+  return 4 + lane * (dmSize + LINE_GAP);
+}
+
+function measure(text) {
+  let units = 0;
+  for (let i = 0; i < text.length; i++) {
+    units += text.charCodeAt(i) > 0x2e80 ? 1 : 0.56;
+  }
+  return Math.max(28, units * dmSize);
+}
+
+function pickLane() {
+  const r = areaRect();
+  const lanes = laneCount();
+  for (let lane = 0; lane < lanes; lane++) {
+    let busy = false;
+    for (const it of live) {
+      if (it.lane === lane && it.x + it.w > r.w - 18) { busy = true; break; }
+    }
+    if (!busy) return lane;
+  }
+  return -1;
+}
+
+/**
+ * 生成一条弹幕。
+ * warm=true 时按「已经跑了 elapsed 毫秒」把 x 直接摆到中途，
+ * 这样打开页面/截图时立刻就有弹幕，而不是空屏等 0.3 秒。
+ */
+function makeDm(text, lane, elapsed) {
+  const r = areaRect();
+  const w = measure(text);
+  const el = document.createElement('div');
+  el.className = 'dm';
+  el.textContent = text;
+  el.style.fontSize = dmSize + 'px';
+  layerEl.appendChild(el);
+  const x = r.w - (r.w + w) * (elapsed / TRAVEL_MS);
+  live.push({ el, x, w, lane });
+}
+
+function spawn(due) {
+  while (cursor < POOL.length && POOL[cursor].t <= due + 60) {
+    const item = POOL[cursor];
+    cursor++;
+    if (posMs - item.t > 3000) continue;   // 落后太多直接跳过，不糊屏
+    const lane = pickLane();
+    if (lane < 0) continue;
+    makeDm(item.text, lane, posMs - item.t);
+  }
+}
+
+/** 页面一打开就摆好一屏弹幕（等价于「已经播了 6 秒」） */
+function seedAt(t) {
+  live.length = 0;
+  layerEl.innerHTML = '';
+  cursor = 0;
+  const lanes = laneCount();
+  let lane = 0;
+  for (const item of POOL) {
+    if (item.t > t) break;
+    const elapsed = t - item.t;
+    if (elapsed > TRAVEL_MS) continue;
+    makeDm(item.text, lane % lanes, elapsed);
+    lane++;
+  }
+  posMs = t;
+  while (cursor < POOL.length && POOL[cursor].t <= t) cursor++;
+}
+
+function tick(ts) {
+  requestAnimationFrame(tick);
+  if (!lastTs) lastTs = ts;
+  const dt = Math.min(80, ts - lastTs);
+  lastTs = ts;
+
+  if (playing) posMs += dt * 1;
+  if (posMs > 20000) posMs = 0;          // 循环播放，方便一直看
+
+  const r = areaRect();
+  const step = r.w / TRAVEL_MS * dt;
+
+  if (!dmOn) {
+    if (live.length) { live.length = 0; layerEl.innerHTML = ''; }
+    return;
+  }
+
+  if (playing) spawn(posMs);
+
+  for (let i = live.length - 1; i >= 0; i--) {
+    const it = live[i];
+    it.x -= step;
+    if (it.x + it.w <= 0) {
+      it.el.remove();
+      live.splice(i, 1);
+      continue;
+    }
+    it.el.style.transform = `translate(${it.x}px, ${laneY(it.lane)}px)`;
+  }
+
+  // 进度条：真实剧集 12:40，从 02:14 开始播，和右侧时长保持一致
+  const BASE_MS = 134000;
+  const TOTAL_MS = 760000;
+  const realMs = BASE_MS + posMs;
+  const ratio = Math.min(1, realMs / TOTAL_MS);
+  document.getElementById('fill').style.width = (ratio * 100) + '%';
+  document.getElementById('knob').style.left = (ratio * 100) + '%';
+  const sec = Math.floor(realMs / 1000);
+  document.getElementById('tCur').textContent =
+    String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+}
+
+function resetDm() {
+  live.length = 0;
+  layerEl.innerHTML = '';
+  cursor = 0;
+  while (cursor < POOL.length && POOL[cursor].t < posMs) cursor++;
+}
+
+function showHint(text) {
+  hintEl.textContent = text;
+  // 贴画面下沿往上 96vp（控制条上方）：既不压弹幕，也不在画面正中飘。
+  // 外层 .phone 有 scale(1.5)：rect 是缩放后的视觉像素，必须除以 k 换回布局单位；
+  // 而 .vbox 是 top:50% + translate(-50%) 居中，offsetTop 只反映 50% 不含 translate，
+  // 所以这里统一走 rect + 换算，不用 offsetTop。
+  const k = screenEl.getBoundingClientRect().width / 360;
+  const vr = videoEl.getBoundingClientRect();
+  const lr = layerEl.getBoundingClientRect();
+  const layerTop = (lr.top - vr.top) / k;
+  // 128 是底部控制条整体高度（时间行 + 进度条 + 按钮行），再往上才压不到控件
+  const toast = layerTop + lr.height / k - 128;
+  hintEl.style.top = Math.max(toast, layerTop + 40) + 'px';
+  hintEl.classList.add('show');
+  clearTimeout(showHint._t);
+  showHint._t = setTimeout(() => hintEl.classList.remove('show'), 2600);
+}
+
+/* ---------- 交互 ---------- */
+function setFull(on) {
+  screenEl.classList.toggle('full', on);
+  document.getElementById('cHalf').classList.toggle('on', !on);
+  document.getElementById('cFull').classList.toggle('on', on);
+  document.getElementById('pillPortrait').style.display = on ? 'none' : '';
+  setTimeout(() => {
+    if (dmOn) seedAt(posMs);
+    if (screenEl.classList.contains('anno-on')) buildAnno();
+  }, 320);
+}
+
+function setSheet(on) {
+  screenEl.classList.toggle('open', on);
+  document.getElementById('cSheet').classList.toggle('on', on);
+  if (screenEl.classList.contains('anno-on')) setTimeout(buildAnno, 320);
+}
+
+function setDm(on) {
+  dmOn = on;
+  document.getElementById('cDm').classList.toggle('on', on);
+  document.getElementById('cDm').textContent = on ? '弹幕开' : '弹幕关';
+  document.getElementById('swDm').classList.toggle('on', on);
+  document.getElementById('dmState').textContent = on ? '已加载 12 条官方弹幕' : '已关闭';
+  if (!on) { live.length = 0; layerEl.innerHTML = ''; }
+  else { seedAt(posMs); showHint('本集 12 条弹幕'); }
+}
+
+function setPlaying(on) {
+  playing = on;
+  document.getElementById('cPlay').textContent = on ? '暂停' : '播放';
+  document.getElementById('btnPlay').innerHTML = on
+    ? '<svg viewBox="0 0 24 24" fill="#F7F2EF"><path d="M6 4.5l13 7.5-13 7.5z"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="#F7F2EF"><path d="M7 5h3.2v14H7zM13.8 5H17v14h-3.2z"/></svg>';
+}
+
+document.getElementById('btnSetTop').onclick = () => setSheet(true);
+document.getElementById('btnSetBottom').onclick = () => setSheet(true);
+document.getElementById('btnQuality').onclick = () => setSheet(true);
+document.getElementById('pillSpeed').onclick = () => setSheet(true);
+document.getElementById('btnClose').onclick = () => setSheet(false);
+document.getElementById('mask').onclick = () => setSheet(false);
+document.getElementById('btnDm').onclick = () => setDm(!dmOn);
+document.getElementById('swDm').onclick = () => setDm(!dmOn);
+document.getElementById('btnPlay').onclick = () => setPlaying(!playing);
+document.getElementById('btnFull').onclick = () => setFull(!screenEl.classList.contains('full'));
+document.getElementById('pillPortrait').onclick = () => setFull(true);
+document.getElementById('btnBack').onclick = () => {
+  if (screenEl.classList.contains('full')) setFull(false);
+};
+
+document.getElementById('cHalf').onclick = () => setFull(false);
+document.getElementById('cFull').onclick = () => setFull(true);
+document.getElementById('cDm').onclick = () => setDm(!dmOn);
+document.getElementById('cSheet').onclick = () => setSheet(!screenEl.classList.contains('open'));
+document.getElementById('cPlay').onclick = () => setPlaying(!playing);
+document.getElementById('cAnno').onclick = (e) => {
+  const on = !screenEl.classList.contains('anno-on');
+  screenEl.classList.toggle('anno-on', on);
+  e.currentTarget.classList.toggle('on', on);
+  if (on) buildAnno();
+};
+
+/* ---------- 标注：按真实元素的 box 生成，状态变了就重算 ---------- */
+const ANNO = [
+  { sel: '#btnDm', label: '弹幕开关（新增）', pos: 'up right' },
+  { sel: '#btnSetTop', label: '设置（新增·全屏也有）', pos: 'up right' },
+  { sel: '#btnSetBottom', label: '底栏设置（新增）', pos: 'up right' },
+  { sel: '#dmLayer', label: '弹幕层：尺寸=真实画面，越界裁掉', pos: 'up' }
+];
+
+function buildAnno() {
+  const annoEl = document.getElementById('anno');
+  annoEl.innerHTML = '';
+  const host = screenEl.getBoundingClientRect();
+  const k = host.width / 360;
+  for (const item of ANNO) {
+    const el = document.querySelector(item.sel);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    const mark = document.createElement('div');
+    mark.className = 'mark ' + item.pos;
+    mark.dataset.label = item.label;
+    mark.style.left = (r.x - host.x) / k + 'px';
+    mark.style.top = (r.y - host.y) / k + 'px';
+    mark.style.width = r.width / k + 'px';
+    mark.style.height = r.height / k + 'px';
+    annoEl.appendChild(mark);
+  }
+}
+
+// 点击画面：显隐控件（和真实实现一致：3 秒无操作自动收起）
+let hideTimer = -1;
+function showControls() {
+  videoEl.classList.remove('ctrl-hidden');
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => {
+    if (playing && !screenEl.classList.contains('open')) {
+      videoEl.classList.add('ctrl-hidden');
+    }
+  }, 3000);
+}
+videoEl.addEventListener('click', (e) => {
+  if (e.target.closest('.round, .pill, .quality, .center-play')) return;
+  showControls();
+});
+showControls();
+
+// 字号档位联动弹幕大小
+document.querySelectorAll('[data-size]').forEach((el) => {
+  el.onclick = () => {
+    el.parentNode.querySelectorAll('.chip').forEach((c) => c.classList.remove('on'));
+    el.classList.add('on');
+    dmSize = Number(el.dataset.size);
+    seedAt(posMs);
+  };
+});
+
+// 倍速格：点了就地生效，不关面板
+document.querySelectorAll('#speedGrid .chip').forEach((el) => {
+  el.onclick = () => {
+    el.parentNode.querySelectorAll('.chip').forEach((c) => c.classList.remove('on'));
+    el.classList.add('on');
+    document.getElementById('pillSpeed').textContent = el.textContent;
+    document.getElementById('pillSpeed').classList.toggle('on', el.textContent !== '1.0x');
+  };
+});
+
+seedAt(6000);
+requestAnimationFrame(tick);
+setTimeout(() => showHint('本集 12 条弹幕'), 400);
+
+// 便于直接分享某个状态：player-preview.html?state=full 或 ?state=sheet（也认 #full / #sheet）
+const flag = (new URLSearchParams(location.search).get('state') || '') + location.hash.replace('#', '');
+if (flag.indexOf('full') >= 0) { setFull(true); }
+if (flag.indexOf('sheet') >= 0) { setSheet(true); }
+if (flag.indexOf('anno') >= 0) {
+  screenEl.classList.add('anno-on');
+  document.getElementById('cAnno').classList.add('on');
+  setTimeout(buildAnno, 200);
+}
+</script>
+</body>
+</html>

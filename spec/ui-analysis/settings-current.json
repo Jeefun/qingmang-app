@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 2,
+  "status": "ok",
+  "producer": {
+    "tool": "recognize_ui_components",
+    "model": "Qwen3_VL_235B_A22B_Instruct",
+    "invocationId": "2ba7741e-667d-42ad-9214-08447750e967",
+    "createdAt": "2026-11-07T07:43:50.945Z"
+  },
+  "inputs": {
+    "image": {
+      "path": "spec/ui-analysis/settings-current.jpeg",
+      "sha256": "03c3a8a98096401e96ff2d00e3665b3589ad29c714fe258915a18862688ed560"
+    },
+    "requirements": {
+      "text": "这是一个 HarmonyOS 应用的设置页面截图。请详细描述页面布局结构：有哪些分组/卡片、每个分组内的行项内容和顺序、间距和留白情况、视觉层次是否清晰、哪里显得拥挤或混乱，以及整体信息架构问题。",
+      "sha256": "856b4c3d6345e902eb9380cb49bb8f529950f2918e3177baddbb7c1097e4ce4b"
+    }
+  },
+  "analysis": {
+    "canvas": {
+      "width": 1260,
+      "height": 2720
+    },
+    "visible_components": [
+      {
+        "id": "component-1",
+        "name": "主题选择组",
+        "visual_evidence": "包含三个按钮：'跟随系统'、'日间'（绿色选中）、'夜览'，位于'外观'标题下",
+        "component_candidates": [
+          {
+            "name": "ToggleGroup",
+            "confidence": 0.9,
+            "reason": "用于在多个互斥选项中选择一个，视觉上呈现为一组按钮，当前选中项高亮"
+          }
+        ]
+      },
+      {
+        "id": "component-2",
+        "name": "降低透明度开关",
+        "visual_evidence": "标题为'降低透明度'，下方有说明文字，右侧为灰色关闭状态的开关",
+        "component_candidates": [
+          {
+            "name": "Switch",
+            "confidence": 0.95,
+            "reason": "标准的开关控件，用于开启/关闭功能，右侧有滑块"
+          }
+        ]
+      },
+      {
+        "id": "component-3",
+        "name": "减弱动效开关",
+        "visual_evidence": "标题为'减弱动效'，下方有说明文字，右侧为灰色关闭状态的开关",
+        "component_candidates": [
+          {
+            "name": "Switch",
+            "confidence": 0.95,
+            "reason": "与上一项相同，为标准开关控件"
+          }
+        ]
+      },
+      {
+        "id": "component-4",
+        "name": "观看统计卡片",
+        "visual_evidence": "包含两个并列区域，左侧'1分钟内 今日观看'，右侧'1分钟内 本周观看'，中间有竖线分隔",
+        "component_candidates": [
+          {
+            "name": "Row",
+            "confidence": 0.85,
+            "reason": "用于水平排列两个统计项，中间用分隔线隔开"
+          }
+        ]
+      },
+      {
+        "id": "component-5",
+        "name": "默认倍速选择组",
+        "visual_evidence": "标题为'默认倍速'，下方两行共九个圆角按钮，'1.0x'为绿色选中状态",
+        "component_candidates": [
+          {
+            "name": "ToggleGroup",
+            "confidence": 0.9,
+            "reason": "用于在多个倍速选项中选择一个，视觉上为一组按钮，选中项高亮"
+          }
+        ]
+      },
+      {
+        "id": "component-6",
+        "name": "后台播放开关",
+        "visual_evidence": "标题为'后台播放'，下方有说明文字，右侧为红色开启状态的开关",
+        "component_candidates": [
+          {
+            "name": "Switch",
+            "confidence": 0.95,
+            "reason": "标准开关控件，当前为开启状态，颜色为红色"
+          }
+        ]
+      },
+      {
+        "id": "component-7",
+        "name": "自动下一集开关",
+        "visual_evidence": "标题为'自动下一集'，下方有说明文字，右侧为红色开启状态的开关",
+        "component_candidates": [
+          {
+            "name": "Switch",
+            "confidence": 0.95,
+            "reason": "标准开关控件，当前为开启状态"
+          }
+        ]
+      },
+      {
+        "id": "component-8",
+        "name": "显示弹幕开关",
+        "visual_evidence": "标题为'显示弹幕'，下方有部分说明文字，右侧为红色开启状态的开关",
+        "component_candidates": [
+          {
+            "name": "Switch",
+            "confidence": 0.95,
+            "reason": "标准开关控件，当前为开启状态"
+          }
+        ]
+      }
+    ],
+    "global_observations": [],
+    "uncertainties": []
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "module": {
+    "name": "entry",
+    "type": "entry",
+    "description": "$string:module_desc",
+    "mainElement": "EntryAbility",
+    // car 必须显式声明：超级桌面按「应用声明的设备类型」决定窗口下发通道。
+    // 只声明 phone/tablet/2in1 时，车机会把我们当「未适配的手机应用」塞进
+    // 9:18 兼容窗口——高度占满屏幕、宽度只有一半，看上去就是屏幕中间一条竖条。
+    "deviceTypes": [
+      "phone",
+      "tablet",
+      "2in1",
+      "car"
+    ],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "pages": "$profile:main_pages",
+    // 应用级沉浸光感开关（HarmonyOS 7 / API 26）。
+    // 只在 entry 类型 module 生效；enable 后 Toggle / Slider / Select / 弹窗 / 菜单
+    // 默认套用系统材质，标题栏再通过 Navigation.title 的 systemMaterial 单独接管。
+    "metadata": [
+      {
+        "name": "ohos.arkui.UIMaterial.state",
+        "value": "enable"
+      }
+    ],
+    "abilities": [
+      {
+        "name": "EntryAbility",
+        "srcEntry": "./ets/entryability/EntryAbility.ets",
+        "description": "$string:EntryAbility_desc",
+        "icon": "$media:startIcon",
+        "label": "$string:EntryAbility_label",
+        "startWindowIcon": "$media:startIcon",
+        "startWindowBackground": "$color:start_window_background",
+        "exported": true,
+        "orientation": "auto_rotation",
+        // 多窗布局方向（官方取值：default / portrait / landscape / landscape_auto）：
+        //   landscape      = 多窗布局固定横向，支持横向悬浮窗 + 上下分屏（横向游戏类用）
+        //   landscape_auto = 多窗布局「动态」可变为横向，须配合 enableLandscapeMultiWindow()/
+        //                    disableLandscapeMultiWindow() 使用，官方明确「建议视频类应用配置」
+        // 本应用是视频类且要在车机超级桌面（本质是多窗/投屏场景）里横向铺开，
+        // 所以取 landscape_auto —— 且必须与 EntryAbility 里的 enableLandscapeMultiWindow() 成对，
+        // 只配 landscape 时那个 API 不生效（SDK 注释写明 preferMultiWindowOrientation 必须为 landscape_auto）。
+        "preferMultiWindowOrientation": "landscape_auto",
+        // 投屏播放在系统侧进行，声明音频播后台模式 + KEEP_BACKGROUND_RUNNING
+        // 才能在锁屏/切后台时维持投播长时任务
+        "backgroundModes": [
+          "audioPlayback"
+        ],
+        "supportWindowMode": [
+          "fullscreen",
+          "split",
+          "floating"
+        ],
+        "minWindowWidth": 360,
+        "minWindowHeight": 360,
+        "skills": [
+          {
+            "entities": [
+              "entity.system.home"
+            ],
+            "actions": [
+              "action.system.home"
+            ]
+          }
+        ],
+        // 跨设备接续播放（onContinue）：只在被用户明确触发时迁移，
+        // 迁移数据只带 seriesId/episodeIndex，落到目标端历史记录自然续播
+        "continuable": true
+      }
+    ],
+    "extensionAbilities": [
+      {
+        "name": "EntryFormAbility",
+        "srcEntry": "./ets/entryformability/EntryFormAbility.ets",
+        "label": "$string:EntryFormAbility_label",
+        "description": "$string:EntryFormAbility_desc",
+        "type": "form",
+        "metadata": [
+          {
+            "name": "ohos.extension.form",
+            "resource": "$profile:form_config"
+          }
+        ]
+      }
+    ],
+    "requestPermissions": [
+      {
+        "name": "ohos.permission.INTERNET"
+      },
+      {
+        "name": "ohos.permission.GET_NETWORK_INFO"
+      },
+      {
+        // 投屏（AVCastController）期间本地播放器暂停、由系统往远端推流，
+        // 应用需保持长时任务以免切后台被冻结、投播中断
+        "name": "ohos.permission.KEEP_BACKGROUND_RUNNING"
+      },
+      {
+        // 摇一摇剧荒盲盒：加速度传感器采样
+        // （normal 级 system_grant：安装即授予，无需运行时弹窗）
+        "name": "ohos.permission.ACCELEROMETER"
+      },
+      {
+        // 跨设备接续播放：分布式数据同步
+        "name": "ohos.permission.DISTRIBUTED_DATASYNC",
+        "reason": "$string:datasync_reason",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "inuse"
+        }
+      }
+    ]
+  }
+}

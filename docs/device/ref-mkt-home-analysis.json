@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 2,
+  "status": "ok",
+  "producer": {
+    "tool": "recognize_ui_components",
+    "model": "Qwen3_VL_235B_A22B_Instruct",
+    "invocationId": "369adf64-7e95-4876-a0bf-ee1c9a5352f2",
+    "createdAt": "2026-11-06T14:05:13.838Z"
+  },
+  "inputs": {
+    "image": {
+      "path": "docs/device/ref-mkt-home.jpeg",
+      "sha256": "60b0b4c4ff92f408d28d011cf8a2d905d14a2664756f26042c2bfef6be14061d"
+    },
+    "requirements": {
+      "text": "这是一张鸿蒙智行问界M9车机屏幕截图（可能是某应用在超级桌面上的显示效果）。请描述：1) 屏幕整体布局与宽高比（是否满屏、有无黑边）2) 应用窗口是否全屏铺满 3) 界面内容与元素 4) 是否有导航地图悬浮窗",
+      "sha256": "45f76afb25580ad161e2c2fc16e5f9e9d83168251bc4aba77529b3913324aeaa"
+    }
+  },
+  "analysis": {
+    "canvas": {
+      "width": 1260,
+      "height": 2720
+    },
+    "visible_components": [
+      {
+        "id": "component-1",
+        "name": "探索",
+        "visual_evidence": "屏幕左上角显示大号黑色文字“探索”",
+        "component_candidates": [
+          {
+            "name": "Text",
+            "confidence": 0.9,
+            "reason": "用于显示标题文本"
+          }
+        ]
+      },
+      {
+        "id": "component-2",
+        "name": "搜索图标",
+        "visual_evidence": "屏幕右上角有一个放大镜图标",
+        "component_candidates": [
+          {
+            "name": "Button",
+            "confidence": 0.85,
+            "reason": "通常作为搜索功能的触发按钮"
+          }
+        ]
+      },
+      {
+        "id": "component-3",
+        "name": "购物指南卡片",
+        "visual_evidence": "包含插画、标题“我本位购物指南”、副标题“双十一 88 件好物推荐...”及四个应用图标（美团、淘宝、11.11、抖音）",
+        "component_candidates": [
+          {
+            "name": "Column",
+            "confidence": 0.8,
+            "reason": "用于垂直排列卡片内的图文内容"
+          },
+          {
+            "name": "Image",
+            "confidence": 0.9,
+            "reason": "用于显示背景插画和应用图标"
+          },
+          {
+            "name": "Text",
+            "confidence": 0.85,
+            "reason": "用于显示标题和副标题文字"
+          },
+          {
+            "name": "Row",
+            "confidence": 0.75,
+            "reason": "用于水平排列四个应用图标"
+          }
+        ]
+      },
+      {
+        "id": "component-4",
+        "name": "奔奔王国应用推荐卡片",
+        "visual_evidence": "包含游戏图标、标题“奔奔王国”、副标题“轻松塔防，保卫王国”和“安装”按钮",
+        "component_candidates": [
+          {
+            "name": "Column",
+            "confidence": 0.8,
+            "reason": "用于垂直排列游戏图标、标题、副标题和按钮"
+          },
+          {
+            "name": "Image",
+            "confidence": 0.9,
+            "reason": "用于显示游戏图标"
+          },
+          {
+            "name": "Text",
+            "confidence": 0.85,
+            "reason": "用于显示标题和副标题"
+          },
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "用于“安装”操作"
+          }
+        ]
+      },
+      {
+        "id": "component-5",
+        "name": "本周新鲜应用标题",
+        "visual_evidence": "显示“推荐”和“本周新鲜应用”文字",
+        "component_candidates": [
+          {
+            "name": "Text",
+            "confidence": 0.9,
+            "reason": "用于显示分类标题"
+          }
+        ]
+      },
+      {
+        "id": "component-6",
+        "name": "底部导航栏",
+        "visual_evidence": "包含五个图标和文字标签：探索、游戏、应用、元服务、我的",
+        "component_candidates": [
+          {
+            "name": "Tabs",
+            "confidence": 0.85,
+            "reason": "用于实现底部标签导航"
+          },
+          {
+            "name": "Button",
+            "confidence": 0.8,
+            "reason": "每个标签项可视为一个导航按钮"
+          },
+          {
+            "name": "Image",
+            "confidence": 0.85,
+            "reason": "用于显示每个标签的图标"
+          },
+          {
+            "name": "Text",
+            "confidence": 0.85,
+            "reason": "用于显示每个标签的文字"
+          }
+        ]
+      }
+    ],
+    "global_observations": [],
+    "uncertainties": []
+  }
+}

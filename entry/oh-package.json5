@@ -1,0 +1,9 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "青芒短视频主模块（EntryAbility）",
+  "main": "",
+  "author": "dudu",
+  "license": "GPL-3.0",
+  "dependencies": {}
+}
